@@ -9,14 +9,7 @@ const passport = require("passport");
 
 // Load input Validation
 const validateRegisterInput = require("../validation/register");
-
-// @route    GET api/users/test
-// @Desc     Tests users route
-// @access   Public
-router.get("/", (req, res) => res.json({
-  msg: "Users Works!"
-}));
-
+const validateLoginInput = require("../validation/login");
 
 // @route    GET api/users/register
 // @Desc     Register user
@@ -72,15 +65,21 @@ router.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
+  const { errors, isValid } = validateLoginInput(req.body);
+
+  // Check Validation
+  if(!isValid) {
+    return(res.status(400).json(errors))
+  }
+
   // Find user by email
   User.findOne({
       email
     })
     .then(user => {
       if (!user) {
-        return (res.status(404).json({
-          email: "User not found"
-        }));
+        errors.email = "User not found"
+        return (res.status(404).json({email: errors}));
       }
 
       // Check Password
@@ -105,9 +104,8 @@ router.post("/login", (req, res) => {
               })
             });
           } else {
-            return (res.status(400).json({
-              password: "Password incorrect"
-            }));
+            errors.password = "Incorrect password";
+            return (res.status(400).json({password: errors}));
           }
         })
     })
@@ -116,9 +114,7 @@ router.post("/login", (req, res) => {
 // @route    GET api/users/currect
 // @Desc     Return currect user
 // @access   Private
-router.get("/current", passport.authenticate("jwt", {
-  session: false
-}), (req, res) => {
+router.get("/current", passport.authenticate("jwt", {session: false}), (req, res) => {
   res.json({
     id: req.user.id,
     name: req.user.name,
